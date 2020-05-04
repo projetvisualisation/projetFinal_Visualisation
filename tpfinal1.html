@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html> 
+    <meta charset="utf-8">
+<head>
+    <title>
+       REPRESENTATION DE LA POPULATION DES PAYS DE LA CEDEAO UTILISANT L' INTERNET:
+
+    </title>
+
+
+ </head> 
+ <style>
+    body {background-color: powderblue;}
+    
+    p    {color: rgb(55, 0, 255)(55, 0, 255);}
+    </style>  
+
+<script src="https://code.jquery.com/jquery-1.12.4.min.js" charset="utf-8"></script>
+<script src="https://d3js.org/d3.v2.min.js"></script>
+<h4> DIAGRAMME EN BANDE DE LA POPULATION DES PAYS DE LA CEDEAO UTILISANT L' INTERNET DE 2010 EN 2014:
+</h4>
+<style type="text/css">
+    #chart text {
+        fill: black;
+        font: 10px sans-serif;
+        text-anchor: end;
+    }
+
+    .axis text {
+        font: 10px sans-serif;
+    }
+
+    .axis path, .axis line {
+        fill: none;
+        /*stroke: #fff;*/
+        shape-rendering: crispEdges;
+    }
+
+    body {
+        /*background: #1a1a1a;*/
+        color: #eaeaea;
+        padding: 10px;
+    }
+
+    path {
+        stroke: steelblue;
+        stroke-width: 3;
+        fill: none;
+    }
+</style>
+
+
+<body>
+    <div id="chart" style="height:700px;width:1300px">
+        <div class="innerCont" style="overflow: auto; top:100px; left: 10px; height:91% ; Width:100% ;position: relative;overflow: hidden;"></div>
+    </div>
+</body>
+
+<script type="text/javascript">
+    var salesData;
+    var truncLengh = 30;
+    $(document).ready(function () {
+        Plot();
+    });
+    function Plot() {
+        TransformChartData(chartData, chartOptions);
+        BuildBar("chart", chartData, chartOptions);
+    }
+
+    function BuildBar(id, chartData, options, level) {
+        //d3.selectAll("#" + id + " .innerCont").remove();
+        //$("#" + id).append(chartInnerDiv);
+        chart = d3.select("#" + id + " .innerCont");
+
+        var margin = { top: 50, right: 10, bottom: 30, left: 50 },
+        width = $(chart[0]).outerWidth() - margin.left - margin.right,
+        height = $(chart[0]).outerHeight() - margin.top - margin.bottom
+        var xVarName;
+        var yVarName = options[0].yaxis;
+
+        if (level == 1) {
+            xVarName = options[0].xaxisl1;
+        }
+        else {
+            xVarName = options[0].xaxis;
+        }
+
+        var xAry = runningData.map(function (el) {
+            return el[xVarName];
+        });
+
+        var yAry = runningData.map(function (el) {
+            return el[yVarName];
+        });
+
+        var capAry = runningData.map(function (el) { return el.caption; });
+
+
+        var x = d3.scale.ordinal().domain(xAry).rangeRoundBands([0, width], .5);
+        var y = d3.scale.linear().domain([0, d3.max(runningData, function (d) { return d[yVarName]; })]).range([height, 0]);
+        var rcolor = d3.scale.ordinal().range(runningColors);
+
+        chart = chart
+                    .append("svg")  //append svg element inside #chart
+                    .attr("width", width + margin.left + margin.right)    //set width
+                    .attr("height", height + margin.top + margin.bottom);  //set height
+
+        var defs = chart.append("defs");
+
+        var filter = defs.append("filter")
+        .attr("id", "dropshadow")
+
+        //Create blur effect
+        filter.append("feGaussianBlur")
+            .attr("in", "SourceAlpha") // Create blur effect acrossborder, SourceGraphic
+            .attr("stdDeviation", 5) // Amount of blur
+            .attr("result", "blur");
+
+        //Drop Shadow - Intensity and direction of shadow
+        filter.append("feOffset")
+            .attr("in", "blur")
+            .attr("dx", 10)
+            .attr("dy", 10)
+            .attr("result", "offsetBlur");
+
+        //How to merge shadow and svg
+        /*
+        var feMerge = filter.append("feMerge");
+        feMerge.append("feMergeNode")
+            .attr("in", "offsetBlur")
+        feMerge.append("feMergeNode")
+            .attr("in", "SourceGraphic");
+        */
+        var feMerge = filter.append("feBlend")
+            .attr("in", "SourceGraphic")
+            .attr("in2", "blurOut")
+            .attr("mode", "normal")
+
+
+        var bar = chart.selectAll("g")
+                        .data(runningData)
+                        .enter()
+                        .append("g")
+                        .attr("filter", "url(#dropshadow)")
+                        .attr("transform", function (d) {
+                            return "translate(" + x(d[xVarName]) + ", 0)";
+                        });
+
+        var ctrtxt = 0;
+        var xAxis = d3.svg.axis()
+                    .scale(x)
+                    //.orient("bottom").ticks(xAry.length).tickValues(capAry);  //orient bottom because x-axis tick labels will appear on the
+                    .orient("bottom").ticks(xAry.length)
+                    .tickFormat(function (d) {
+                        if (level == 0) {
+                            var mapper = options[0].captions[0]
+                            return mapper[d]
+                        }
+                        else {
+                            var r = runningData[ctrtxt].caption;
+                            ctrtxt += 1;
+                            return r;
+                        }
+                    });
+
+        var yAxis = d3.svg.axis()
+                        .scale(y)
+                        .orient("left").ticks(5); //orient left because y-axis tick labels will appear on the left side of the axis.
+
+        bar.append("rect")
+            .attr("y", function (d) {
+                return y(d.population) + margin.top - 15;
+            })
+            .attr("x", function (d) {
+                return (margin.left);
+            })
+            .on("mouseenter", function (d) {
+                d3.select(this)
+                    .attr("stroke", "white")
+                    .attr("stroke-width", 1)
+                    .attr("height", function (d) {
+                        return height - y(d[yVarName]) + 5;
+                    })
+                    .attr("y", function (d) {
+                        return y(d.population) + margin.top - 20;
+                    })
+                    .attr("width", x.rangeBand() + 10)
+                    .attr("x", function (d) {
+                        return (margin.left - 5);
+                    })
+                    .transition()
+                    .duration(200);
+
+
+            })
+            .on("mouseleave", function (d) {
+                d3.select(this)
+                    .attr("stroke", "none")
+                    .attr("height", function (d) {
+                        return height - y(d[yVarName]);;
+                    })
+                    .attr("y", function (d) {
+                        return y(d[yVarName]) + margin.top - 15;
+                    })
+                    .attr("width", x.rangeBand())
+                    .attr("x", function (d) {
+                        return (margin.left);
+                    })
+                    .transition()
+                    .duration(200);
+
+            })
+            .on("click", function (d) {
+                if (this._listenToEvents) {
+                    // Reset inmediatelly
+                    d3.select(this).attr("transform", "translate(0,0)")
+                    // Change level on click if no transition has started                
+                    path.each(function () {
+                        this._listenToEvents = false;
+                    });
+                }
+                d3.selectAll("#" + id + " svg").remove();
+                if (level == 1) {
+                    TransformChartData(chartData, options, 0, d[xVarName]);
+                    BuildBar(id, chartData, options, 0);
+                }
+                else {
+                    var nonSortedChart = chartData.sort(function (a, b) {
+                        return parseFloat(b[options[0].yaxis]) - parseFloat(a[options[0].yaxis]);
+                    });
+                    TransformChartData(nonSortedChart, options, 1, d[xVarName]);
+                    BuildBar(id, nonSortedChart, options, 1);
+                }
+
+            });
+
+
+        bar.selectAll("rect").attr("height", function (d) {
+            return height - y(d[yVarName]);
+        })
+        .transition().delay(function (d, i) { return i * 300; })
+        .duration(1000)
+        .attr("width", x.rangeBand()) //set width base on range on ordinal data
+        .transition().delay(function (d, i) { return i * 300; })
+        .duration(1000);
+
+
+        var grads = defs.selectAll("linearGradient")
+         .data(runningData)
+         .enter()
+         .append("linearGradient")
+         .attr('y1', "0%")
+         .attr('x1', "0%")
+         .attr('x2', "50%")
+         .attr('y2', "50%")
+         .attr("spreadMethod", "pad")
+         //.attr("gradientUnits", "userSpaceOnUse")
+         .attr("id", function (d, i) { return "grad" + id + i; });
+
+        grads.append("stop")
+            .attr("offset", "0%")
+            .attr("stop-opacity", 1)
+            .attr("stop-color", "white");
+
+        grads.append("stop")
+            .attr("offset", "100%")
+            .attr("stop-opacity", 1)
+            .attr("stop-color", function (d, i) {
+                return d3.rgb(rcolor(d[xVarName]));
+            });
+
+
+        i = 0;
+        bar.selectAll("rect").style("fill", function (d) {
+            var ret = "url(#grad" + id + i + ")";
+            i++;
+            return ret;
+        })
+        .style("opacity", function (d) {
+            return d["op"];
+        });
+
+        //bar.selectAll("rect").style("fill", function (d) {
+        //    return rcolor(d[xVarName]);
+        //})
+
+        bar.append("text")
+            .attr("x", x.rangeBand() / 2 + margin.left - 10)
+            .attr("y", function (d) { return y(d[yVarName]) + margin.top - 25; })
+            .attr("dy", ".35em")
+            .text(function (d) {
+                return d[yVarName];
+            });
+
+        bar.append("svg:title")
+            .text(function (d) {
+                //return xVarName + ":  " + d["title"] + " \x0A" + yVarName + ":  " + d[yVarName];
+                return d["title"] + " (" + d[yVarName] + ")";
+            });
+
+        chart.append("g")
+            .attr("class", "x axis")
+            .attr("transform", "translate(" + margin.left + "," + (height + margin.top - 15) + ")")
+            .call(xAxis)
+        .append("text")
+            .attr("x", width)
+            .attr("y", -6)
+        .style("text-anchor", "end")
+        //.text("Year");
+
+        chart.append("g")
+            .attr("class", "y axis")
+            .attr("transform", "translate(" + margin.left + "," + (margin.top - 15) + ")")
+            .call(yAxis)
+            .append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 6)
+            .attr("dy", ".100em")
+            .style("text-anchor", "end")
+        //.text("Sales Data");
+
+        if (level == 1) {
+            chart.select(".x.axis")
+            .selectAll("text")
+            .attr("transform", " translate(-20,10) rotate(-35)");
+        }
+
+    }
+
+    function TransformChartData(chartData, opts, level, filter) {
+        var result = [];
+        var resultColors = [];
+        var counter = 0;
+        var hasMatch;
+        var xVarName;
+        var yVarName = opts[0].yaxis;
+
+        if (level == 1) {
+            xVarName = opts[0].xaxisl1;
+
+            for (var i in chartData) {
+                hasMatch = false;
+                for (var index = 0; index < result.length; ++index) {
+                    var data = result[index];
+
+                    if ((data[xVarName] == chartData[i][xVarName]) && (chartData[i][opts[0].xaxis]) == filter) {
+                        result[index][yVarName] = result[index][yVarName] + chartData[i][yVarName];
+                        hasMatch = true;
+                        break;
+                    }
+
+                }
+                if ((hasMatch == false) && ((chartData[i][opts[0].xaxis]) == filter)) {
+                    if (result.length < 9) {
+                        ditem = {}
+                        ditem[xVarName] = chartData[i][xVarName];
+                        ditem[yVarName] = chartData[i][yVarName];
+                        ditem["caption"] = chartData[i][xVarName].substring(0, 10) + '...';
+                        ditem["title"] = chartData[i][xVarName];
+                        ditem["op"] = 1.0 - parseFloat("0." + (result.length));
+                        result.push(ditem);
+
+                        resultColors[counter] = opts[0].color[0][chartData[i][opts[0].xaxis]];
+
+                        counter += 1;
+                    }
+                }
+            }
+        }
+        else {
+            xVarName = opts[0].xaxis;
+
+            for (var i in chartData) {
+                hasMatch = false;
+                for (var index = 0; index < result.length; ++index) {
+                    var data = result[index];
+
+                    if (data[xVarName] == chartData[i][xVarName]) {
+                        result[index][yVarName] = result[index][yVarName] + chartData[i][yVarName];
+                        hasMatch = true;
+                        break;
+                    }
+                }
+                if (hasMatch == false) {
+                    ditem = {};
+                    ditem[xVarName] = chartData[i][xVarName];
+                    ditem[yVarName] = chartData[i][yVarName];
+                    ditem["caption"] = opts[0].captions != undefined ? opts[0].captions[0][chartData[i][xVarName]] : "";
+                    ditem["title"] = opts[0].captions != undefined ? opts[0].captions[0][chartData[i][xVarName]] : "";
+                    ditem["op"] = 1;
+                    result.push(ditem);
+
+                    resultColors[counter] = opts[0].color != undefined ? opts[0].color[0][chartData[i][xVarName]] : "";
+
+                    counter += 1;
+                }
+            }
+        }
+
+
+        runningData = result;
+        runningColors = resultColors;
+        return;
+    }
+    var chartData = [
+        {
+            "Country": "BENIN",
+            "annee": "2014",
+            "population": 5.3
+        },
+        {
+            "Country": "BENIN",
+            "annee": "2013",
+            "population": 4.9
+        },
+        {
+            "Country": "BENIN",
+            "annee": "2012",
+            "population": 4.5
+        },
+        {
+            "Country": "BENIN",
+            "annee": "2011",
+            "population": 4.14832306562512
+        },
+        {
+            "Country": "BENIN",
+            "annee": "2010",
+            "population": 3.13
+        },
+        {
+            "Country": "BURKINA FASO",
+            "annee": "2014",
+            "population": 9.4
+        },
+        {
+            "Country": "BURKINA FASO",
+            "annee": "2013",
+            "population": 9.1
+        },
+        {
+            "Country": "BURKINA FASO",
+            "annee": "2012",
+            "population": 3.72503491597675
+        },
+        {
+            "Country": "BURKINA FASO",
+            "annee": "2011",
+            "population": 3
+        },
+        {
+            "Country": "BURKINA FASO",
+            "annee": "2010",
+            "population": 2.4
+        },
+        {
+            "Country": "CAPE VERDE",
+            "annee": "2014",
+            "population": 40.26
+        },
+        {
+            "Country": "CAPE VERDE",
+            "annee": "2013",
+            "population": 37.5
+        },
+        {
+            "Country": "CAPE VERDE",
+            "annee": "2012",
+            "population": 34.74
+        },
+        {
+            "Country": "CAPE VERDE",
+            "annee": "2011",
+            "population": 32
+        },
+        {
+            "Country": "CAPE VERDE",
+            "annee": "2010",
+            "population": 30
+        },
+        {
+            "Country": "COTE D'IVOIRE",
+            "annee": "2014",
+            "population": 14.6
+        },
+        {
+            "Country": "COTE D'IVOIRE",
+            "annee": "2013",
+            "population": 8.4
+        },
+        {
+            "Country": "COTE D'IVOIRE",
+            "annee": "2012",
+            "population": 5
+        },
+        {
+            "Country": "COTE D'IVOIRE",
+            "annee": "2011",
+            "population": 2.9
+        },
+        {
+            "Country": "COTE D'IVOIRE",
+            "annee": "2010",
+            "population": 2.7
+        },
+        {
+            "Country": "GAMBIA",
+            "annee": "2014",
+            "population": 15.56
+        },
+        {
+            "Country": "GAMBIA",
+            "annee": "2013",
+            "population": 14
+        },
+        {
+            "Country": "GAMBIA",
+            "annee": "2012",
+            "population": 12.4492287209242
+        },
+        {
+            "Country": "GAMBIA",
+            "annee": "2011",
+            "population": 10.8703
+        },
+        {
+            "Country": "GAMBIA",
+            "annee": "2010",
+            "population": 9.2
+        },
+        {
+            "Country": "GHANA",
+            "annee": "2014",
+            "population": 18.9
+        },
+        {
+            "Country": "GHANA",
+            "annee": "2013",
+            "population": 12.3
+        },
+        {
+            "Country": "GHANA",
+            "annee": "2012",
+            "population": 10.6
+        },
+        {
+            "Country": "GHANA",
+            "annee": "2011",
+            "population": 9
+        },
+        {
+            "Country": "GHANA",
+            "annee": "2010",
+            "population": 7.8
+        },
+        {
+            "Country": "GUINEA",
+            "annee": "2014",
+            "population": 1.72
+        },
+        {
+            "Country": "GUINEA",
+            "annee": "2013",
+            "population": 1.6
+        },
+        {
+            "Country": "GUINEA",
+            "annee": "2012",
+            "population": 1.49014436571885
+        },
+        {
+            "Country": "GUINEA",
+            "annee": "2011",
+            "population": 1.3
+        },
+        {
+            "Country": "GUINEA",
+            "annee": "2010",
+            "population": 1
+        },
+        {
+            "Country": "GUINEA-BISSAU",
+            "annee": "2014",
+            "population": 3.32
+        },
+        {
+            "Country": "GUINEA-BISSAU",
+            "annee": "2013",
+            "population": 3.1
+        },
+        {
+            "Country": "GUINEA-BISSAU",
+            "annee": "2012",
+            "population": 2.893990620085531
+        },
+        {
+            "Country": "GUINEA-BISSAU",
+            "annee": "2011",
+            "population": 2.672
+        },
+        {
+            "Country": "GUINEA-BISSAU",
+            "annee": "2010",
+            "population": 2.45
+        },
+        {
+            "Country": "LIBERIA",
+            "annee": "2014",
+            "population": 5.41
+        },
+        {
+            "Country": "LIBERIA",
+            "annee": "2013",
+            "population": 3.2
+        },
+        {
+            "Country": "LIBERIA",
+            "annee": "2012",
+            "population": 2.6
+        },
+        {
+            "Country": "LIBERIA",
+            "annee": "2011",
+            "population": 2.5
+        },
+        {
+            "Country": "LIBERIA",
+            "annee": "2010",
+            "population": 2.3
+        },
+        {
+            "Country": "MALI",
+            "annee": "2014",
+            "population": 7
+        },
+        {
+            "Country": "MALI",
+            "annee": "2013",
+            "population": 3.5
+        },
+        {
+            "Country": "MALI",
+            "annee": "2012",
+            "population": 2.8
+        },
+        {
+            "Country": "MALI",
+            "annee": "2011",
+            "population": 2.2
+        },
+        {
+            "Country": "MALI",
+            "annee": "2010",
+            "population": 2
+        },
+        {
+            "Country": "NIGER",
+            "annee": "2014",
+            "population": 1.95
+        },
+        {
+            "Country": "NIGER",
+            "annee": "2013",
+            "population": 1.7
+        },
+        {
+            "Country": "NIGER",
+            "annee": "2012",
+            "population": 1.4070
+        },
+        {
+            "Country": "NIGER",
+            "annee": "2011",
+            "population": 1.3
+        },
+        {
+            "Country": "NIGER",
+            "annee": "2010",
+            "population": 0.83
+        },
+        {
+            "Country": "NIGERIA",
+            "annee": "2014",
+            "population": 42.68
+        },
+        {
+            "Country": "NIGERIA",
+            "annee": "2013",
+            "population": 38
+        },
+        {
+            "Country": "NIGERIA",
+            "annee": "2012",
+            "population": 32.8
+        },
+        {
+            "Country": "NIGERIA",
+            "annee": "2011",
+            "population": 28.43
+        },
+        {
+            "Country": "NIGERIA",
+            "annee": "2010",
+            "population": 24
+        },
+        {
+            "Country": "SENEGAL",
+            "annee": "2014",
+            "population": 17.7
+        },
+        {
+            "Country": "SENEGAL",
+            "annee": "2013",
+            "population": 13.1
+        },
+        {
+            "Country": "SENEGAL",
+            "annee": "2012",
+            "population": 10.8
+        },
+        {
+            "Country": "SENEGAL",
+            "annee": "2011",
+            "population": 9.8
+        },
+        {
+            "Country": "SENEGAL",
+            "annee": "2010",
+            "population": 8
+        },
+        {
+            "Country": "SIERRA LEONE",
+            "annee": "2014",
+            "population": 2.1
+        },
+        {
+            "Country": "SIERRA LEONE",
+            "annee": "2013",
+            "population": 1.7
+        },
+        {
+            "Country": "SIERRA LEONE",
+            "annee": "2012",
+            "population": 1.3
+        },
+        {
+            "Country": "SIERRA LEONE",
+            "annee": "2011",
+            "population": 0.9
+        },
+        {
+            "Country": "SIERRA LEONE",
+            "annee": "2010",
+            "population": 0.58
+        },
+        {
+            "Country": "TOGO",
+            "annee": "2014",
+            "population": 5.7
+        },
+        {
+            "Country": "TOGO",
+            "annee": "2013",
+            "population": 4.5
+        },
+        {
+            "Country": "TOGO",
+            "annee": "2012",
+            "population": 4
+        },
+        {
+            "Country": "TOGO",
+            "annee": "2011",
+            "population": 3.5
+        },
+        {
+            "Country": "TOGO",
+            "annee": "2010",
+            "population": 3
+        }
+    ];
+    chartOptions = [{
+        "captions": [{ "BENIN": "BENIN", "BURKINA FASO": "BURKINA FASO", "CAPE VERDE": "CAPE VERDE","COTE D'IVOIRE": "COTE D'IVOIRE", "GAMBIA": "GAMBIA", "GHANA": "GHANA","GUINEA": "GUINEA","GUINEA-BISSAU": "GUINEA-BISSAU ", "LIBERIA": "LIBERIA", "MALI": "MALI","NIGER": "NIGER","NIGERIA": "NIGERIA", "SENEGAL": "SENEGAL", "SIERRA LEONE": "SIERRA LEONE","TOGO": "TOGO" }],
+        "color": [{ "BENIN": "#FFA500", "BURKINA FASO": "#0070C0", "CAPE VERDE": "#ff0000","COTE D'IVOIRE": "#0000FF", "GAMBIA": "#F40D42", "GHANA": "#18450B","GUINEA": "#357178", "GUINEA-BISSAU": "#3F0432", "LIBERIA": "#630034","MALI": "#2E1C08", "NIGER": "#C82605", "NIGERIA": "#63100F","SENEGAL": "#ECE8BE","SIERRA LEONE": "#002F2F", "TOGO": "#00FF00"}],
+        "xaxis": "Country",
+        "xaxisl1": "annee",
+        "yaxis": "population"
+    }]
+</script>
+</html>
